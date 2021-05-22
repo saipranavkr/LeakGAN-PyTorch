@@ -24,11 +24,11 @@ parser = argparse.ArgumentParser(description="LeakGAN")
 parser.add_argument("--hpc", action="store_true", default=False)
 parser.add_argument("--data_path", type=str, default="/save_files/", metavar="PATH", 
                     help="Data path to save files (default: /save_files/)")
-parser.add_argument("--rounds", type=int, default=150, metavar="N",
+parser.add_argument("--rounds", type=int, default=15, metavar="N",
                     help="Rounds of adversarial training (default:150)")
-parser.add_argument("--g_pretrain_steps", type=int, default=120, metavar="N",
+parser.add_argument("--g_pretrain_steps", type=int, default=12, metavar="N",
                     help="Steps of pre-training generator (defaul: 120)")                    
-parser.add_argument("--d_pretrain_steps", type=int, default=50, metavar="N",
+parser.add_argument("--d_pretrain_steps", type=int, default=5, metavar="N",
                     help="Steps of pre-training discriminator (defaul: 50)")    
 parser.add_argument("--g_steps", type=int, default=1, metavar="N", 
                     help="Steps of generator updates in one round of adversarial training (defaul: 1)") #gen_train_num
@@ -64,14 +64,14 @@ NEGATIVE_FILE = "gene.data"
 # Genrator Parameters
 g_embed_dim = 32
 g_hidden_dim = 32
-g_seq_len = 20
+g_seq_len = 10
 #   MANAGER:
 g_m_batch_size = 64
 g_m_hidden_dim = 32
 g_m_goal_out_size = 0
 #   WORKER:
 g_w_batch_size = 64
-g_w_vocab_size = 5258
+g_w_vocab_size = 4797
 g_w_embed_dim = 32
 g_w_hidden_dim = 32
 g_w_goal_out_size = 0
@@ -79,12 +79,12 @@ g_w_goal_size = 16
 
 g_step_size = 5
 # Discriminator Parameters
-d_seq_len = 20
+d_seq_len = 10
 d_num_classes = 2
-d_vocab_size = 5258
+d_vocab_size = 4797
 d_dis_emb_dim = 64
-d_filter_sizes = [1,2,3,4,5,6,7,8,9,10,15,20],
-d_num_filters = [100,200,200,200,200,100,100,100,100,100,160,160],
+d_filter_sizes = [1,2,3,4,5,6,7,8,9,10],
+d_num_filters = [100,200,200,200,200,100,100,100,100,100],
 d_start_token = 0
 d_goal_out_size = 0
 d_step_size = 5
@@ -195,7 +195,7 @@ def pretrain_generator(model_dict, optimizer_dict, scheduler_dict, dataloader, v
             sample = sample.cuda(async=True)
         
         # Calculate pretrain loss
-        if (sample.size() == torch.zeros([64, 20]).size()): #sometimes smaller than 64 (16) is passed, so this if statement disables it
+        if (sample.size() == torch.zeros([64, 10]).size()): #sometimes smaller than 64 (16) is passed, so this if statement disables it
             #print("Sample size: {}".format(sample.size()))
             pre_rets = recurrent_func("pre")(model_dict, sample, use_cuda)
             real_goal = pre_rets["real_goal"]
@@ -354,12 +354,6 @@ def adversarial_train(model_dict, optimizer_dict, scheduler_dict, dis_dataloader
         cross_entropy = nn.CrossEntropyLoss()
         if use_cuda:
             cross_entropy = cross_entropy.cuda()
-        """
-        for d-steps do
-            Use current G, θm,θw to generate negative examples and combine with given positive examples S 
-            Train discriminator Dφ for k epochs by Eq. (2)
-        end for
-        """
         for _ in range(dis_train_num): 
             for i, sample in enumerate(dataloader):
                 data, label = sample["data"], sample["label"]

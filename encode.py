@@ -14,6 +14,7 @@ def text_to_tensor(filePath):
         l = l.strip().split(' ') #strip removes blank spaces from both sides
         if len(l) < 28:
             corpus.append(l)
+    print(corpus)
     """
     Get all words used in text
     """
@@ -33,12 +34,12 @@ def text_to_tensor(filePath):
     corpus_num = []
     for p in corpus:
         corpus_num.append(list(map(lambda x: vocab.index(x) + 1, p)))
-    corpus_data = np.array(corpus_data)
+    corpus_data = np.array(corpus_num)
 
     """
     Save preprocessed file
     """
-    np.save("corpus", corpus_data) #save the training corpus data, where words are represented as numbers(their index in vocab array)
+    np.save("corpus", corpus_data, fix_imports=False) #save the training corpus data, where words are represented as numbers(their index in vocab array)
     f = open("chars.pkl", "wb") #this is in a sense table of keys
     pickle.dump(vocab, f)
 

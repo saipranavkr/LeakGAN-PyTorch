@@ -7,14 +7,14 @@ import torch.nn.functional as F
 
 
 def init_vars(generator, discriminator, use_cuda=False):
-    h_w_t, c_w_t = generator.init_hidden() #worker unit of gen
-    h_m_t, c_m_t = generator.init_hidden() #manager unit of gen
+    h_w_t, _ = generator.init_hidden() #worker unit of gen
+    h_m_t, _ = generator.init_hidden() #manager unit of gen
     last_goal = Variable(torch.zeros(generator.worker.batch_size, generator.worker.goal_out_size)) #bach_size * goal_out_size
     real_goal = generator.manager.goal_init
     x_t = Variable(nn.init.constant_(torch.Tensor(
         generator.worker.batch_size
     ), discriminator.start_token)).long()
-    variables_ = [h_w_t, c_w_t, h_m_t, c_m_t, last_goal, real_goal, x_t]
+    variables_ = [h_w_t, h_m_t, last_goal, real_goal, x_t]
     vs = []
     if use_cuda:
         for var in variables_:
@@ -44,7 +44,7 @@ def recurrent_func(f_type = "pre"):
             '''
             Initialize variables and lists for forward step.
             '''
-            h_w_t, c_w_t, h_m_t, c_m_t, last_goal, real_goal, x_t = \
+            h_w_t, h_m_t, last_goal, real_goal, x_t = \
                 init_vars(generator, discriminator, use_cuda)
             t = 0
             feature_list = []
@@ -81,9 +81,9 @@ def recurrent_func(f_type = "pre"):
                 #print("F_t from discr: {}".format(f_t))
                 #print("F_t from discr: {}".format(f_t.size()))
                 #G forward tep
-                x_t, h_m_t, c_m_t, h_w_t, c_w_t, last_goal, real_goal,\
+                x_t, h_m_t, h_w_t, last_goal, real_goal,\
                 sub_goal, probs, t_ = generator(
-                        x_t, f_t, h_m_t, c_m_t, h_w_t, c_w_t, last_goal,
+                        x_t, f_t, h_m_t, h_w_t, last_goal,
                         real_goal, t, temperature
                     )
                 if t % step_size == 0:
@@ -130,7 +130,7 @@ def recurrent_func(f_type = "pre"):
             """
             generator = model_dict["generator"]
             discriminator = model_dict["discriminator"]
-            h_w_t, c_w_t, h_m_t, c_m_t, last_goal, real_goal, x_t = \
+            h_w_t, h_m_t, last_goal, real_goal, x_t = \
                 init_vars(generator, discriminator, use_cuda)
             t = 0
             feature_list = []
@@ -164,7 +164,7 @@ def recurrent_func(f_type = "pre"):
                     cur_sen = cur_sen.cuda(async=True)
                 f_t = discriminator(cur_sen)["feature"]
                 #Generator forward step
-                x_t, h_m_t, c_m_t, h_w_t, c_w_t, last_goal, real_goal, sub_goal, probs, t_ = generator(x_t, f_t, h_m_t, c_m_t, h_w_t, c_w_t, last_goal, real_goal, t, temperature)
+                x_t, h_m_t, h_w_t, last_goal, real_goal, sub_goal, probs, t_ = generator(x_t, f_t, h_m_t, h_w_t, last_goal, real_goal, t, temperature)
                 if t % step_size == 0:
                     if t > 0:
                         real_goal = last_goal
@@ -218,7 +218,7 @@ def recurrent_func(f_type = "pre"):
             generator = model_dict["generator"]
             discriminator = model_dict["discriminator"]
             #Init vairables and lists for forward step
-            h_w_t, c_w_t, h_m_t, c_m_t, last_goal, real_goal, x_t = \
+            h_w_t, h_m_t, last_goal, real_goal, x_t = \
                 init_vars(generator, discriminator, use_cuda)
             t = 0
             gen_token_list = []
@@ -239,8 +239,8 @@ def recurrent_func(f_type = "pre"):
                     cur_sen = F.pad(cur_sen, (0, seq_len - t), value=vocab_size)
                 f_t = discriminator(cur_sen)["feature"]
                 #G forward step now that you have f
-                _, h_m_t, c_m_t, h_w_t, c_w_t, last_goal, real_goal,\
-                sub_goal, probs, t_ = generator( x_t, f_t, h_m_t, c_m_t, h_w_t, c_w_t, last_goal, real_goal, t, temperature)
+                _, h_m_t, h_w_t, last_goal, real_goal,\
+                sub_goal, probs, t_ = generator( x_t, f_t, h_m_t, h_w_t, last_goal, real_goal, t, temperature)
                 if t % step_size == 0:
                     if t > 0:
                         real_goal = last_goal
@@ -263,7 +263,7 @@ def recurrent_func(f_type = "pre"):
                     cur_sen = F.pad(cur_sen, (0, seq_len - t + 1), value=vocab_size)
                 f_t = discriminator(cur_sen)["feature"]
                 #Generator forward step
-                x_t, h_m_t, c_m_t, h_w_t, c_w_t, last_goal, real_goal,sub_goal, probs, t_ = generator(x_t, f_t, h_m_t, c_m_t, h_w_t, c_w_t, last_goal,
+                x_t, h_m_t, h_w_t, last_goal, real_goal,sub_goal, probs, t_ = generator(x_t, f_t, h_m_t, h_w_t, last_goal,
                     real_goal, t, temperature)
                 if t % step_size == 0:
                     real_goal = last_goal
@@ -281,7 +281,7 @@ def recurrent_func(f_type = "pre"):
         def func(model_dict, use_cuda=False, temperature=1.0):
             generator = model_dict["generator"]
             discriminator = model_dict["discriminator"]
-            h_w_t, c_w_t, h_m_t, c_m_t, last_goal, real_goal, x_t = \
+            h_w_t, h_m_t, last_goal, real_goal, x_t = \
                 init_vars(generator, discriminator, use_cuda)
             t = 0
             gen_token_list = []
@@ -306,8 +306,8 @@ def recurrent_func(f_type = "pre"):
                     )
                 f_t = discriminator(cur_sen)["feature"]
                 #G forward step
-                x_t, h_m_t, c_m_t, h_w_t, c_w_t, last_goal, real_goal, sub_goal, probs, t_ = generator(x_t, f_t, h_m_t, c_m_t, 
-                        h_w_t, c_w_t, last_goal,real_goal, t, temperature)
+                x_t, h_m_t, h_w_t, last_goal, real_goal, sub_goal, probs, t_ = generator(x_t, f_t, h_m_t, 
+                        h_w_t, last_goal,real_goal, t, temperature)
                 if t % step_size == 0:
                     if t > 0:
                         real_goal = last_goal
